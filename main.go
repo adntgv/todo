@@ -17,6 +17,10 @@ type Task struct {
 	Text string
 }
 
+func (t Task) String() string {
+	return fmt.Sprintf("%v:\t%v", t.ID, t.Text)
+}
+
 func readParams(configFile string) (string, error) {
 	var user, dbname, password string
 	content, err := ioutil.ReadFile(configFile)
@@ -52,9 +56,20 @@ func listTasks(db *gorm.DB) {
 	}
 }
 
+func createTask(db *gorm.DB, text string) {
+	task := Task{Text: text}
+	db.Create(&task)
+}
+
+func removeTask(db *gorm.DB, id int) {
+	db.Delete(Task{}, "id=?", id)
+}
+
 func main() {
 	list := flag.Bool("list", false, "list all tasks")
 	new := flag.Bool("new", false, "add a task")
+	done := flag.Bool("done", false, "finish and remove task")
+	id := flag.Int("id", 0, "id of a task")
 	flag.Parse()
 
 	dbParams, err := readParams("config.txt")
@@ -77,9 +92,13 @@ func main() {
 		}
 	case *new:
 		{
-			task := Task{Text: strings.Join(flag.Args(), " ")}
-			fmt.Println(task)
-			db.Create(&task)
+			createTask(db, strings.Join(flag.Args(), " "))
 		}
+	case *done:
+		{
+			removeTask(db, *id)
+		}
+	default:
+		flag.Usage()
 	}
 }
