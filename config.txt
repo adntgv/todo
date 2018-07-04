@@ -1,0 +1,4 @@
+# Database connection
+user=postgres
+password=postgres
+dbname=todo

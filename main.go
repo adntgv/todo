@@ -1,11 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -14,9 +14,7 @@ import (
 // Task model for gorm
 type Task struct {
 	gorm.Model
-	Text     string
-	Done     bool
-	Deadline time.Time
+	Text string
 }
 
 func readParams(configFile string) (string, error) {
@@ -42,7 +40,23 @@ func readParams(configFile string) (string, error) {
 	return fmt.Sprintf("user=%s dbname=%s password=%s", user, dbname, password), nil
 }
 
+func listTasks(db *gorm.DB) {
+	var tasks []Task
+	db.Find(&tasks, &[]Task{})
+	if len(tasks) < 1 {
+		fmt.Println("There are no tasks for now")
+	} else {
+		for _, task := range tasks {
+			fmt.Println(task)
+		}
+	}
+}
+
 func main() {
+	list := flag.Bool("list", false, "list all tasks")
+	new := flag.Bool("new", false, "add a task")
+	flag.Parse()
+
 	dbParams, err := readParams("config.txt")
 	if err != nil {
 		log.Fatal(err)
@@ -52,4 +66,20 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+
+	if db.HasTable(&Task{}) == false {
+		db.CreateTable(&Task{})
+	}
+	switch {
+	case *list:
+		{
+			listTasks(db)
+		}
+	case *new:
+		{
+			task := Task{Text: strings.Join(flag.Args(), " ")}
+			fmt.Println(task)
+			db.Create(&task)
+		}
+	}
 }
